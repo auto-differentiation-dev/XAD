@@ -14,11 +14,16 @@ jobs:
       image: ghcr.io/foonathan/gcc:12
     steps:
       - uses: actions/checkout@v4
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2.10
+        with:
+          key: hackathon-libor
       - name: configure
         run: |
           mkdir build
           cd build
           cmake .. -GNinja \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER=g++ \
             -DXAD_NO_THREADLOCAL=ON \
