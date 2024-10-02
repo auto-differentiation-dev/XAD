@@ -22,8 +22,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=g++ \
             -DXAD_NO_THREADLOCAL=ON \
             -DXAD_SIMD_OPTION=AVX2 \
-            -DXAD_USE_STRONG_INLINE=ON \
-            -DXAD_ENABLE_TESTS=OFF
+            -DXAD_USE_STRONG_INLINE=ON
       - name: build
         run: |
           cd build
