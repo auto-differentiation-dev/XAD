@@ -1,12 +1,13 @@
 name: Hackathon
 on: 
   pull_request:
-    types: [ labeled ]
+    types: [opened, synchronize, labeled, unlabeled ]
   workflow_dispatch: 
 
 
 jobs:
   libor:
+    if: contains(github.event.pull_request.labels.*.name, 'hackathon')
     name: Libor Swaption Sample
     runs-on: ubuntu-latest
     container: 
