@@ -1,0 +1,94 @@
+name: Hackathon
+on: 
+  pull_request:
+    types: [ labeled ]
+  workflow_dispatch: 
+
+
+jobs:
+  libor:
+    name: Libor Swaption Sample
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/foonathan/gcc:12
+    steps:
+      - uses: actions/checkout@v4
+      - name: configure
+        run: |
+          mkdir build
+          cd build
+          cmake .. -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DXAD_NO_THREADLOCAL=ON \
+            -DXAD_SIMD_OPTION=AVX2 \
+            -DXAD_USE_STRONG_INLINE=ON \
+            -DXAD_ENABLE_TESTS=OFF
+      - name: build
+        run: |
+          cd build
+          cmake --build .
+      - name: Run Test
+        run: |
+          cd build/samples/LiborSwaptionPricer
+          ./LiborSwaptionPricer 100 test
+      # if we are on main branch & triggered by workflow-dispatch, push artefact
+      - name: Push Reference
+        uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: libor_exe
+          path: build/samples/LiborSwaptionPricer/LiborSwaptionPricer
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
+      # if we are in a pull request, pull the uploaded artifact from earlier and run
+      - name: Pull Reference
+        uses: actions/download-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: libor_exe
+          github-token: ${{ secrets.ARTIFACT_READ_TOKEN }}
+          repository: auto-differentiation-dev/xad
+          path: build/samples/LiborSwaptionPricer/LiborSwaptionPricerRef
+          run-id: 1234
+      - name: Run Benchmark
+        run: |
+          cd build/samples/LiborSwaptionPricer
+          ./LiborSwaptionPricer 100000 | tee output.log
+      - name: Run Reference
+        if: github.event_name == 'pull_request'
+        run: |
+          cd build/samples/LiborSwaptionPricer
+          ls
+          ./LiborSwaptionPricerRef 100000 | tee reference.log
+      - name: Prepare results
+        if: github.event_name == 'pull_request'
+        run: |
+          OUT_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/output.log)
+          REF_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/reference.log)
+          PERCENTAGE=$(echo "scale=3; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100" | bc)
+          
+          echo "# LIBOR Swaption Portfolio Pricer" > results.md
+          echo "" >> results.md
+          echo "- **Time:** $OUT_TIME seconds" >> results.md
+          echo "- **Reference:** $REF_TIME seconds" >> results.md
+          echo "- **Improvement:** $PERCENTAGE %" >> results.md
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        if: github.event_name == 'pull_request'
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: LIBOR Swaption Portfolio Pricer
+      - name: Post or update PR comment
+        id: pr-comment
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: results.md
+          edit-mode: replace
+      
