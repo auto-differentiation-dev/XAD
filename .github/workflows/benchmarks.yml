@@ -118,3 +118,226 @@ jobs:
           body-path: results.md
           edit-mode: replace
       
+  quantlib:
+    if: contains(github.event.pull_request.labels.*.name, 'benchmarks') || github.event_name == 'workflow_dispatch'
+    name: QuantLib Samples
+    runs-on: ubuntu-latest
+    container: ghcr.io/lballabio/quantlib-devenv:rolling
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: xad
+      - uses: actions/checkout@v4
+        with:
+          repository: lballabio/QuantLib
+          ref: v1.35
+          path: QuantLib
+      - uses: actions/checkout@v4
+        with:
+          path: QuantLib-Risks-Cpp
+          repository: auto-differentiation/QuantLib-Risks-Cpp
+          ref: a1fcf4f0fab0a464710c249aa76871421675babd
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: benchmark-quantlib
+      - name: Setup
+        run: |
+          apt-get update \
+          && apt-get install -y ninja-build bc
+      - name: Configure
+        run: |
+          cd QuantLib
+          mkdir build
+          cd build
+          cmake -G Ninja -DBOOST_ROOT=/usr \
+            -DCMAKE_CXX_STANDARD=17 \
+            -DQLRISKS_DISABLE_AAD=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DQL_EXTERNAL_SUBDIRECTORIES="$(pwd)/../../xad;$(pwd)/../../QuantLib-Risks-Cpp" \
+            -DQL_EXTRA_LINK_LIBRARIES=QuantLib-Risks \
+            -DQL_NULL_AS_FUNCTIONS=ON \
+            -DXAD_NO_THREADLOCAL=ON \
+            -DXAD_SIMD_OPTION=AVX2 \
+            ..
+      - name: Compile
+        run: |
+          cd QuantLib/build
+          cmake --build .
+      - name: Test QuantLib
+        run: |
+          cd QuantLib/build
+          ./test-suite/quantlib-test-suite --log_level=message    
+      - name: Test QuantLib-Risks
+        run: |
+          cd QuantLib/build
+          ./QuantLib-Risks-Cpp/test-suite/quantlib-risks-test-suite --log_level=message
+      # if we are on main branch & triggered by workflow-dispatch, push artefact
+      - name: Push Reference Test-suite
+        uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: ql_test_exe
+          path: QuantLib/build/test-suite/quantlib-test-suite
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
+      - name: Push Reference AdjointBermudan
+        uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: ql_bermudan_exe
+          path: QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/AdjointBermudanSwaption
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
+      # if we are in a pull request, pull the uploaded artifact from earlier and run
+      - name: Pull Reference Test-suite
+        uses: actions/download-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: ql_test_exe
+          repository: auto-differentiation-dev/xad
+          path: QuantLib/build/test-suite/ref
+          github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
+          run-id: 11146849833
+      - name: Pull Reference AdjointBermudan
+        uses: actions/download-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: ql_test_exe
+          repository: auto-differentiation-dev/xad
+          path: QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/ref
+          github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
+          run-id: 11146849833
+      - name: Run Reference Test-suite
+        if: github.event_name == 'pull_request'
+        run: |
+          set -e
+          cd QuantLib/build/test-suite/ref
+          ls -l
+          file ./quantlib-test-suite
+          chmod +x ./quantlib-test-suite
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee ../reference.log
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log
+      - name: Run Benchmark Test-suite
+        run: |
+          set -e
+          cd QuantLib/build/test-suite
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee output.log
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log
+      - name: Prepare results
+        if: github.event_name == 'pull_request'
+        run: |
+          set -e
+          
+          OUT_TIME=$(sed -e 's/us$//g' QuantLib/build/test-suite/output.log | \
+                     awk 'BEGIN { best=1000000000 } \
+                          $1 == "Leaving" && $6 == "time:" { best = best < $7 ? best : $7; } \
+                          END {print best}' )
+          echo "Run time: $OUT_TIME"
+          OUT_TIME=$(sed -e 's/us$//g' QuantLib/build/test-suite/reference.log | \
+                     awk 'BEGIN { best=1000000000 } \
+                          $1 == "Leaving" && $6 == "time:" { best = best < $7 ? best : $7; } \
+                          END {print best}' )
+          echo "Reference time: $REF_TIME"
+          DIFFERENCE=$(echo "scale=3; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
+          echo "Difference: $DIFFERENCE"
+          PERCENTAGE=$(echo "scale=3; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100.0" | bc | awk '{printf "%.3f\n", $1}')
+          echo "Percentage: $PERCENTAGE"
+          
+          echo "# QuantLib Sample testPathwiseGreeks" > results.md
+          echo "" >> results.md
+          echo "- **Time:** $OUT_TIME us" >> results.md
+          echo "- **Reference:** $REF_TIME us" >> results.md
+          echo "- **Improvement:** $PERCENTAGE %" >> results.md
+          
+          cat results.md
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        if: github.event_name == 'pull_request'
+        id: fc1
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: QuantLib Sample testPathwiseGreeks
+      - name: Post or update PR comment
+        id: pr-comment1
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.fc1.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: results.md
+          edit-mode: replace
+      - name: Run Reference AdjointBermudan
+        if: github.event_name == 'pull_request'
+        run: |
+          set -e
+          cd QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/ref
+          ls -l
+          file ./AdjointBermudanSwaption
+          chmod +x ./AdjointBermudanSwaption
+          ./AdjointBermudanSwaption 500 | tee ../reference.log
+          ./AdjointBermudanSwaption 500 | tee -a ../reference.log
+          ./AdjointBermudanSwaption 500 | tee -a ../reference.log
+          ./AdjointBermudanSwaption 500 | tee -a ../reference.log
+      - name: Run Benchmark AdjointBermudan
+        run: |
+          set -e
+          cd QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption
+          ./AdjointBermudanSwaption 500 | tee output.log
+          ./AdjointBermudanSwaption 500 | tee -a output.log
+          ./AdjointBermudanSwaption 500 | tee -a output.log
+          ./AdjointBermudanSwaption 500 | tee -a output.log
+      - name: Prepare results
+        if: github.event_name == 'pull_request'
+        run: |
+          set -e
+          
+          OUT_TIME=$(sed -e 's/us$//g' QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/output.log | \
+                      awk 'BEGIN { best=1000000.0 } \
+                          $1 == "For" && $7 == "average" { best = best < $8 ? best : $8; } \
+                          END {print best}' )
+          echo "Run time: $OUT_TIME"
+          OUT_TIME=$(sed -e 's/us$//g' QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/reference.log | \
+                      awk 'BEGIN { best=1000000.0 } \
+                          $1 == "For" && $7 == "average" { best = best < $8 ? best : $8; } \
+                          END {print best}' )
+          echo "Reference time: $REF_TIME"
+          DIFFERENCE=$(echo "scale=3; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
+          echo "Difference: $DIFFERENCE"
+          PERCENTAGE=$(echo "scale=3; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100.0" | bc | awk '{printf "%.3f\n", $1}')
+          echo "Percentage: $PERCENTAGE"
+          
+          echo "# QuantLib AdjointBermudanSwaption" > results.md
+          echo "" >> results.md
+          echo "- **Time:** $OUT_TIME ms" >> results.md
+          echo "- **Reference:** $REF_TIME ms" >> results.md
+          echo "- **Improvement:** $PERCENTAGE %" >> results.md
+          
+          cat results.md
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        if: github.event_name == 'pull_request'
+        id: fc2
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: QuantLib Sample testPathwiseGreeks
+      - name: Post or update PR comment
+        id: pr-comment2
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.fc2.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: results.md
+          edit-mode: replace
