@@ -1,4 +1,4 @@
-name: Hackathon
+name: Benchmarks
 on: 
   pull_request:
     types: [opened, reopened, synchronize, labeled, unlabeled ]
@@ -7,7 +7,7 @@ on:
 
 jobs:
   libor:
-    if: contains(github.event.pull_request.labels.*.name, 'hackathon')
+    if: contains(github.event.pull_request.labels.*.name, 'benchmarks')
     name: Libor Swaption Sample
     runs-on: ubuntu-latest
     container: 
@@ -15,9 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.10
+        uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: hackathon-libor
+          key: benchmark-libor
       - name: configure
         run: |
           mkdir build
@@ -53,10 +53,9 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           name: libor_exe
-          github-token: ${{ secrets.ARTIFACT_READ_TOKEN }}
           repository: auto-differentiation-dev/xad
           path: build/samples/LiborSwaptionPricer/LiborSwaptionPricerRef
-          run-id: 1234
+          run-id: 11146849833
       - name: Run Benchmark
         run: |
           cd build/samples/LiborSwaptionPricer
