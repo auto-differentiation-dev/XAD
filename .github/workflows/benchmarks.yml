@@ -35,8 +35,8 @@ jobs:
           cmake --build .
       - name: Run Test
         run: |
-          cd build/samples/LiborSwaptionPricer
-          ./LiborSwaptionPricer 100 test
+          cd build
+          ctest --no-compress-output --output-on-failure --parallel $(($(nproc) + 2))
       # if we are on main branch & triggered by workflow-dispatch, push artefact
       - name: Push Reference
         uses: actions/upload-artifact@v4
@@ -55,6 +55,7 @@ jobs:
           name: libor_exe
           repository: auto-differentiation-dev/xad
           path: build/samples/LiborSwaptionPricer/LiborSwaptionPricerRef
+          github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
           run-id: 11146849833
       - name: Run Benchmark
         run: |
