@@ -217,9 +217,9 @@ jobs:
         run: |
           set -e
           cd QuantLib/build/test-suite
+          rm -f output.log || true
           # warmup run
           ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" 
-          rm -f output.log || true
           for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
             ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log ; \
           done
@@ -228,13 +228,13 @@ jobs:
         id: test-results
         run: |
           set -e
-          
-          OUT_TIME=$(sed -e 's/us$//g' QuantLib/build/test-suite/output.log | \
+          ls -l QuantLib/build/test-suite/
+          OUT_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/output.log | \
                      awk 'BEGIN { all=0.0 } \
                           $0 ~ /Leaving test case.*testPathwiseGreeks/ { all += $NF / 1000.0; } \
                           END {printf "%.5f\n", all / ${{ vars.REPETITIONS }} }' )
           echo "Run time: $OUT_TIME"
-          REF_TIME=$(sed -e 's/us$//g' QuantLib/build/test-suite/reference.log | \
+          REF_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/reference.log | \
                      awk 'BEGIN { best=0.0 } \
                      $0 ~ /Leaving test case.*testPathwiseGreeks/ { all += $NF / 1000.0; } \
                      END {printf "%.5f\n", all / ${{ vars.REPETITIONS }} }' )
@@ -276,7 +276,7 @@ jobs:
         id: bermudan-results
         run: |
           set -e
-          
+          ls -l QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/
           OUT_TIME=$( awk 'BEGIN { all=0.0 } \
                           $1 == "For" && $7 == "average" { all += $8 ; } \
                           END {printf "%.5f", all / ${{ vars.REPETITIONS }}}' \
