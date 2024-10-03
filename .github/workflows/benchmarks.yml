@@ -66,19 +66,27 @@ jobs:
           file ./LiborSwaptionPricer
           chmod +x ./LiborSwaptionPricer
           ./LiborSwaptionPricer 100000 | tee ../reference.log
+          ./LiborSwaptionPricer 100000 | tee -a ../reference.log
+          ./LiborSwaptionPricer 100000 | tee -a ../reference.log
+          ./LiborSwaptionPricer 100000 | tee -a ../reference.log
+          ./LiborSwaptionPricer 100000 | tee -a ../reference.log
       - name: Run Benchmark
         run: |
           set -e
           cd build/samples/LiborSwaptionPricer
           ./LiborSwaptionPricer 100000 | tee output.log
+          ./LiborSwaptionPricer 100000 | tee -a output.log
+          ./LiborSwaptionPricer 100000 | tee -a output.log
+          ./LiborSwaptionPricer 100000 | tee -a output.log
+          ./LiborSwaptionPricer 100000 | tee -a output.log
       - name: Prepare results
         if: github.event_name == 'pull_request'
         run: |
           set -e
           apt-get update && apt-get install -y bc
-          OUT_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/output.log)
+          OUT_TIME=$(awk 'BEGIN { best=100000.0 } $2 == "AAD" { best = best < $4 ? best : $4; } END {print best}' build/samples/LiborSwaptionPricer/output.log)
           echo "Run time: $OUT_TIME"
-          REF_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/reference.log)
+          REF_TIME=$(awk 'BEGIN { best=100000.0 } $2 == "AAD" { best = best < $4 ? best : $4; } END {print best}' build/samples/LiborSwaptionPricer/reference.log)
           echo "Reference time: $REF_TIME"
           DIFFERENCE=$(echo "scale=3; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
           echo "Difference: $DIFFERENCE"
