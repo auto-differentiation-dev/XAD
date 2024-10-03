@@ -122,7 +122,7 @@ jobs:
     if: contains(github.event.pull_request.labels.*.name, 'benchmarks') || github.event_name == 'workflow_dispatch'
     name: QuantLib Samples
     runs-on: ubuntu-latest
-    container: ghcr.io/lballabio/quantlib-devenv:rolling
+    container: ghcr.io/lballabio/quantlib-devenv:noble-1.85.0
     steps:
       - uses: actions/checkout@v4
         with:
