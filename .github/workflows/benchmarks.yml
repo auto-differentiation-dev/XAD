@@ -206,7 +206,7 @@ jobs:
         uses: actions/download-artifact@v4
         if: github.event_name == 'pull_request'
         with:
-          name: ql_test_exe
+          name: ql_bermudan_exe
           repository: auto-differentiation-dev/xad
           path: QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/ref
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
@@ -331,7 +331,7 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: 'github-actions[bot]'
-          body-includes: QuantLib Sample testPathwiseGreeks
+          body-includes: QuantLib AdjointBermudanSwaption
       - name: Post or update PR comment
         id: pr-comment2
         if: github.event_name == 'pull_request'
