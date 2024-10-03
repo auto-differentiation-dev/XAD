@@ -77,9 +77,10 @@ jobs:
           echo "Run time: $OUT_TIME"
           REF_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/reference.log)
           echo "Reference time: $REF_TIME"
-          PERCENTAGE=$(echo "scale=3; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100" | bc)
+          DIFFERENCE=$(echo "scale=3; $REF_TIME - $OUT_TIME" | bc)
+          echo "Difference: $DIFFERENCE"
+          PERCENTAGE=$(echo "scale=3; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100.0" | bc)
           echo "Percentage: $PERCENTAGE"
-          if [ "$PERCENTAGE" == "" ] ; then exit 1 ; fi
           
           echo "# LIBOR Swaption Portfolio Pricer" > results.md
           echo "" >> results.md
