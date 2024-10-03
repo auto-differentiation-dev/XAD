@@ -57,16 +57,18 @@ jobs:
           path: build/samples/LiborSwaptionPricer/LiborSwaptionPricerRef
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
           run-id: 11146849833
-      - name: Run Benchmark
-        run: |
-          cd build/samples/LiborSwaptionPricer
-          ./LiborSwaptionPricer 100000 | tee output.log
       - name: Run Reference
         if: github.event_name == 'pull_request'
         run: |
           cd build/samples/LiborSwaptionPricer
           chmod +x ./LiborSwaptionPricerRef
+          ls -l
+          file ./LiborSwaptionPricerRef
           ./LiborSwaptionPricerRef 100000 | tee reference.log
+      - name: Run Benchmark
+        run: |
+          cd build/samples/LiborSwaptionPricer
+          ./LiborSwaptionPricer 100000 | tee output.log
       - name: Prepare results
         if: github.event_name == 'pull_request'
         run: |
