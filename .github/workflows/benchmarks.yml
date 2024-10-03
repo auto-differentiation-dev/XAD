@@ -65,11 +65,12 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           cd build/samples/LiborSwaptionPricer
-          ls
+          chmod +x ./LiborSwaptionPricerRef
           ./LiborSwaptionPricerRef 100000 | tee reference.log
       - name: Prepare results
         if: github.event_name == 'pull_request'
         run: |
+          apt-get update && apt-get install -y bc
           OUT_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/output.log)
           REF_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/reference.log)
           PERCENTAGE=$(echo "scale=3; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100" | bc)
