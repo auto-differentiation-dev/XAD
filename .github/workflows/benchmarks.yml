@@ -266,7 +266,7 @@ jobs:
         run: |
           set -e
           cd QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption
-          rm -f reference.log || true
+          rm -f output.log || true
           # warmup run
           ./AdjointBermudanSwaption 200 
           for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
