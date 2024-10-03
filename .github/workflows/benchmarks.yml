@@ -58,7 +58,7 @@ jobs:
           repository: auto-differentiation-dev/xad
           path: build/samples/LiborSwaptionPricer/ref
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
-          run-id: 11146849833
+          run-id: 11161385127
       - name: Run Reference
         if: github.event_name == 'pull_request'
         run: |
@@ -73,6 +73,7 @@ jobs:
           ./LiborSwaptionPricer 100000 | tee -a ../reference.log
           ./LiborSwaptionPricer 100000 | tee -a ../reference.log
       - name: Run Benchmark
+        if: github.event_name == 'pull_request'
         run: |
           set -e
           cd build/samples/LiborSwaptionPricer
@@ -186,7 +187,7 @@ jobs:
           repository: auto-differentiation-dev/xad
           path: QuantLib/build/test-suite/ref
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
-          run-id: 11146849833
+          run-id: 11161385127
       - name: Pull Reference AdjointBermudan
         uses: actions/download-artifact@v4
         if: github.event_name == 'pull_request'
@@ -195,7 +196,7 @@ jobs:
           repository: auto-differentiation-dev/xad
           path: QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/ref
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
-          run-id: 11146849833
+          run-id: 11161385127
       - name: Run Reference Test-suite
         if: github.event_name == 'pull_request'
         run: |
