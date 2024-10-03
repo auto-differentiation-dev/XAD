@@ -60,6 +60,7 @@ jobs:
       - name: Run Reference
         if: github.event_name == 'pull_request'
         run: |
+          set -e
           cd build/samples/LiborSwaptionPricer/ref
           ls -l
           file ./LiborSwaptionPricer
@@ -67,19 +68,21 @@ jobs:
           ./LiborSwaptionPricer 100000 | tee ../reference.log
       - name: Run Benchmark
         run: |
+          set -e
           cd build/samples/LiborSwaptionPricer
           ./LiborSwaptionPricer 100000 | tee output.log
       - name: Prepare results
         if: github.event_name == 'pull_request'
         run: |
+          set -e
           apt-get update && apt-get install -y bc
           OUT_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/output.log)
           echo "Run time: $OUT_TIME"
           REF_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/reference.log)
           echo "Reference time: $REF_TIME"
-          DIFFERENCE=$(echo "scale=3; $REF_TIME - $OUT_TIME" | bc)
+          DIFFERENCE=$(echo "scale=3; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
           echo "Difference: $DIFFERENCE"
-          PERCENTAGE=$(echo "scale=3; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100.0" | bc)
+          PERCENTAGE=$(echo "scale=3; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100.0" | bc | awk '{printf "%.3f\n", $1}')
           echo "Percentage: $PERCENTAGE"
           
           echo "# LIBOR Swaption Portfolio Pricer" > results.md
