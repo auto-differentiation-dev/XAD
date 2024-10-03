@@ -285,7 +285,7 @@ jobs:
   update-runid:
     name: Update Run-id
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dipatch'
+    if: github.event_name == 'workflow_dispatch'
     needs:
       - quantlib
       - libor
