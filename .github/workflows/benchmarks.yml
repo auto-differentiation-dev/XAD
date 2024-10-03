@@ -66,8 +66,10 @@ jobs:
           ls -l
           file ./LiborSwaptionPricer
           chmod +x ./LiborSwaptionPricer
-          ./LiborSwaptionPricer 50000 | tee ../reference.log
-          for i in $(seq 1 9) ; do \
+          rm -f ../reference.log || true
+          # warmup run
+          ./LiborSwaptionPricer 50000
+          for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
             ./LiborSwaptionPricer 50000 | tee -a ../reference.log ; \
           done
       - name: Run Benchmark
@@ -75,9 +77,11 @@ jobs:
         run: |
           set -e
           cd build/samples/LiborSwaptionPricer
-          ./LiborSwaptionPricer 50000 | tee output.log
-          for i in $(seq 1 9) ; do \
-            ./LiborSwaptionPricer 50000 | tee -a ../output.log ; \
+          rm -f output.log || true
+          # warmup run
+          ./LiborSwaptionPricer 50000
+          for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
+            ./LiborSwaptionPricer 50000 | tee -a output.log ; \
           done
       - name: Prepare results
         if: github.event_name == 'pull_request'
@@ -85,9 +89,9 @@ jobs:
         run: |
           set -e
           apt-get update && apt-get install -y bc
-          OUT_TIME=$(awk 'BEGIN { best=100000.0 } $2 == "AAD" { best = best < $4 ? best : $4; } END {print best}' build/samples/LiborSwaptionPricer/output.log)
+          OUT_TIME=$(awk 'BEGIN { all=0.0 } $2 == "AAD" { all += $4  } END { printf "%.5f\n", all / ${{ vars.REPETITIONS }} }' build/samples/LiborSwaptionPricer/output.log)
           echo "Run time: $OUT_TIME"
-          REF_TIME=$(awk 'BEGIN { best=100000.0 } $2 == "AAD" { best = best < $4 ? best : $4; } END {print best}' build/samples/LiborSwaptionPricer/reference.log)
+          REF_TIME=$(awk 'BEGIN { all=0.0 } $2 == "AAD" { all += $4  } END { printf "%.5f\n", all / ${{ vars.REPETITIONS }} }' build/samples/LiborSwaptionPricer/reference.log)
           echo "Reference time: $REF_TIME"
           DIFFERENCE=$(echo "scale=9; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
           echo "Difference: $DIFFERENCE"
@@ -202,8 +206,10 @@ jobs:
           ls -l
           file ./quantlib-test-suite
           chmod +x ./quantlib-test-suite
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee ../reference.log
-          for i in $(seq 1 9) ; do \
+          # warmup run
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because"
+          rm -f ../reference.log || true
+          for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
             ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log ; \
           done
       - name: Run Benchmark Test-suite
@@ -211,8 +217,10 @@ jobs:
         run: |
           set -e
           cd QuantLib/build/test-suite
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee output.log
-          for i in $(seq 1 9) ; do \
+          # warmup run
+          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" 
+          rm -f output.log || true
+          for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
             ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log ; \
           done
       - name: Prepare results Tests-suite
@@ -222,14 +230,14 @@ jobs:
           set -e
           
           OUT_TIME=$(sed -e 's/us$//g' QuantLib/build/test-suite/output.log | \
-                     awk 'BEGIN { best=1000000000 } \
-                          $0 ~ /Leaving test case.*testPathwiseGreeks/ { best = best < $NF ? best : $NF; } \
-                          END {printf "%.3f\n", best / 1000}' )
+                     awk 'BEGIN { all=0.0 } \
+                          $0 ~ /Leaving test case.*testPathwiseGreeks/ { all += $NF / 1000.0; } \
+                          END {printf "%.5f\n", all / ${{ vars.REPETITIONS }} }' )
           echo "Run time: $OUT_TIME"
           REF_TIME=$(sed -e 's/us$//g' QuantLib/build/test-suite/reference.log | \
-                     awk 'BEGIN { best=1000000000 } \
-                     $0 ~ /Leaving test case.*testPathwiseGreeks/ { best = best < $NF ? best : $NF; } \
-                     END {printf "%.3f\n", best / 1000}' )
+                     awk 'BEGIN { best=0.0 } \
+                     $0 ~ /Leaving test case.*testPathwiseGreeks/ { all += $NF / 1000.0; } \
+                     END {printf "%.5f\n", all / ${{ vars.REPETITIONS }} }' )
           echo "Reference time: $REF_TIME"
           DIFFERENCE=$(echo "scale=9; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
           echo "Difference: $DIFFERENCE"
@@ -246,33 +254,37 @@ jobs:
           ls -l
           file ./AdjointBermudanSwaption
           chmod +x ./AdjointBermudanSwaption
-          ./AdjointBermudanSwaption 500 | tee ../reference.log
-          ./AdjointBermudanSwaption 500 | tee -a ../reference.log
-          ./AdjointBermudanSwaption 500 | tee -a ../reference.log
-          ./AdjointBermudanSwaption 500 | tee -a ../reference.log
+          rm -f ../reference.log || true
+          # warmup run
+          ./AdjointBermudanSwaption 200 
+          for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
+            ./AdjointBermudanSwaption 200 | tee -a ../reference.log ; \
+          done
       - name: Run Benchmark AdjointBermudan
         if: github.event_name == 'pull_request'
         run: |
           set -e
           cd QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption
-          ./AdjointBermudanSwaption 500 | tee output.log
-          ./AdjointBermudanSwaption 500 | tee -a output.log
-          ./AdjointBermudanSwaption 500 | tee -a output.log
-          ./AdjointBermudanSwaption 500 | tee -a output.log
+          rm -f reference.log || true
+          # warmup run
+          ./AdjointBermudanSwaption 200 
+          for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
+            ./AdjointBermudanSwaption 200 | tee -a output.log ; \
+          done
       - name: Prepare results Bermudan
         if: github.event_name == 'pull_request'
         id: bermudan-results
         run: |
           set -e
           
-          OUT_TIME=$( awk 'BEGIN { best=1000000.0 } \
-                          $1 == "For" && $7 == "average" { best = best < $8 ? best : $8; } \
-                          END {printf "%.3f", best}' \
+          OUT_TIME=$( awk 'BEGIN { all=0.0 } \
+                          $1 == "For" && $7 == "average" { all += $8 ; } \
+                          END {printf "%.5f", all / ${{ vars.REPETITIONS }}}' \
                           QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/output.log)
           echo "Run time: $OUT_TIME"
-          REF_TIME=$( awk 'BEGIN { best=1000000.0 } \
-                          $1 == "For" && $7 == "average" { best = best < $8 ? best : $8; } \
-                          END {printf "%.3f", best}' \
+          REF_TIME=$( awk 'BEGIN { all=0.0 } \
+                          $1 == "For" && $7 == "average" { all += $8 } \
+                          END {printf "%.5f", all / ${{ vars.REPETITIONS }} }' \
                           QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/reference.log)
           echo "Reference time: $REF_TIME"
           DIFFERENCE=$(echo "scale=9; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
@@ -315,13 +327,13 @@ jobs:
         run: |
           echo "## Performance Results" > results.md
           echo "" >> results.md
-          echo "Best of the given executions, with pre-built reference and this PR's version." >> results.md
+          echo "Average of the ${{ vars.REPETITIONS }} executions, with pre-built reference and this PR's version." >> results.md
           echo "" >> results.md
-          echo "| Application | Executions | Reference | Result | Improvement |" >> results.md
-          echo "|-------------|-----------:|----------:|-------:|------------:|" >> results.md
-          echo "| [LIBOR Swaption (50K paths)](https://github.com/auto-differentiation/xad/tree/main/samples/LiborSwaptionPricer) | 10 $LIBOR" >> results.md
-          echo "| [testPathwiseGreeks](https://github.com/lballabio/QuantLib/blob/v1.35/test-suite/marketmodel.cpp#L2090) | 10 $TESTSUITE" >> results.md
-          echo "| [Bermudan Swaption (500 repetitions)](https://github.com/auto-differentiation/QuantLib-Risks-Cpp/blob/main/Examples/AdjointBermudanSwaption/AdjointBermudanSwaptionXAD.cpp) | 5 $BERMUDAN" >> results.md
+          echo "| Application | Reference | Result | Improvement |" >> results.md
+          echo "|-------------|----------:|-------:|------------:|" >> results.md
+          echo "| [LIBOR Swaption (50K paths)](https://github.com/auto-differentiation/xad/tree/main/samples/LiborSwaptionPricer)  $LIBOR" >> results.md
+          echo "| [testPathwiseGreeks](https://github.com/lballabio/QuantLib/blob/v1.35/test-suite/marketmodel.cpp#L2090)  $TESTSUITE" >> results.md
+          echo "| [Bermudan Swaption (200 repetitions)](https://github.com/auto-differentiation/QuantLib-Risks-Cpp/blob/main/Examples/AdjointBermudanSwaption/AdjointBermudanSwaptionXAD.cpp) $BERMUDAN" >> results.md
 
       - name: Find Comment
         uses: peter-evans/find-comment@v3
