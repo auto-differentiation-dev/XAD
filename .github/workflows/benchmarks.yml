@@ -63,6 +63,7 @@ jobs:
           cd build/samples/LiborSwaptionPricer/ref
           ls -l
           file ./LiborSwaptionPricer
+          chmod +x ./LiborSwaptionPricer
           ./LiborSwaptionPricer 100000 | tee ../reference.log
       - name: Run Benchmark
         run: |
