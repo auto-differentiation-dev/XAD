@@ -206,20 +206,18 @@ jobs:
           file ./quantlib-test-suite
           chmod +x ./quantlib-test-suite
           ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee ../reference.log
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log
+          for i in $(seq 1 9) ; do \
+            ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a ../reference.log ; \
+          done
       - name: Run Benchmark Test-suite
         if: github.event_name == 'pull_request'
         run: |
           set -e
           cd QuantLib/build/test-suite
           ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee output.log
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log
-          ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log
+          for i in $(seq 1 9) ; do \
+            ./quantlib-test-suite --log_level=test_suite --run_test="QuantLibTests/*/testPathwiseGreeks" | grep -v "is skipped because" | tee -a output.log ; \
+          done
       - name: Prepare results Tests-suite
         if: github.event_name == 'pull_request'
         id: test-results
@@ -304,13 +302,13 @@ jobs:
         run: |
           echo "## Performance Results" > results.md
           echo "" >> results.md
-          echo "Best of 5 executions, with pre-built reference and this PR's version." >> results.md
+          echo "Best of the given executions, with pre-built reference and this PR's version." >> results.md
           echo "" >> results.md
-          echo "| Application | Reference | Result | Improvement |" >> results.md
-          echo "|-------------|----------:|-------:|------------:|" >> results.md
-          echo "| [LIBOR Swaption (100K paths)](https://github.com/auto-differentiation/xad/tree/main/samples/LiborSwaptionPricer) $LIBOR" >> results.md
-          echo "| [testPathwiseGreeks](https://github.com/lballabio/QuantLib/blob/v1.35/test-suite/marketmodel.cpp#L2090) $TESTSUITE" >> results.md
-          echo "| [Bermudan Swaption (500 repetitions)](https://github.com/auto-differentiation/QuantLib-Risks-Cpp/blob/main/Examples/AdjointBermudanSwaption/AdjointBermudanSwaptionXAD.cpp) $BERMUDAN" >> results.md
+          echo "| Application | Executions | Reference | Result | Improvement |" >> results.md
+          echo "|-------------|-----------:|----------:|-------:|------------:|" >> results.md
+          echo "| [LIBOR Swaption (100K paths)](https://github.com/auto-differentiation/xad/tree/main/samples/LiborSwaptionPricer) | 5 $LIBOR" >> results.md
+          echo "| [testPathwiseGreeks](https://github.com/lballabio/QuantLib/blob/v1.35/test-suite/marketmodel.cpp#L2090) | 10 $TESTSUITE" >> results.md
+          echo "| [Bermudan Swaption (500 repetitions)](https://github.com/auto-differentiation/QuantLib-Risks-Cpp/blob/main/Examples/AdjointBermudanSwaption/AdjointBermudanSwaptionXAD.cpp) | 5 $BERMUDAN" >> results.md
 
       - name: Find Comment
         uses: peter-evans/find-comment@v3
