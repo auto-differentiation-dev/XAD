@@ -4,7 +4,6 @@ on:
     types: [opened, reopened, synchronize, labeled, unlabeled ]
   workflow_dispatch: 
 
-
 jobs:
   libor:
     if: contains(github.event.pull_request.labels.*.name, 'benchmarks') || github.event_name == 'workflow_dispatch'
@@ -58,7 +57,7 @@ jobs:
           repository: auto-differentiation-dev/xad
           path: build/samples/LiborSwaptionPricer/ref
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
-          run-id: 11161385127
+          run-id: ${{vars.REFERENCE_RUN_ID }}
       - name: Run Reference
         if: github.event_name == 'pull_request'
         run: |
@@ -67,21 +66,19 @@ jobs:
           ls -l
           file ./LiborSwaptionPricer
           chmod +x ./LiborSwaptionPricer
-          ./LiborSwaptionPricer 100000 | tee ../reference.log
-          ./LiborSwaptionPricer 100000 | tee -a ../reference.log
-          ./LiborSwaptionPricer 100000 | tee -a ../reference.log
-          ./LiborSwaptionPricer 100000 | tee -a ../reference.log
-          ./LiborSwaptionPricer 100000 | tee -a ../reference.log
+          ./LiborSwaptionPricer 50000 | tee ../reference.log
+          for i in $(seq 1 9) ; do \
+            ./LiborSwaptionPricer 50000 | tee -a ../reference.log ; \
+          done
       - name: Run Benchmark
         if: github.event_name == 'pull_request'
         run: |
           set -e
           cd build/samples/LiborSwaptionPricer
-          ./LiborSwaptionPricer 100000 | tee output.log
-          ./LiborSwaptionPricer 100000 | tee -a output.log
-          ./LiborSwaptionPricer 100000 | tee -a output.log
-          ./LiborSwaptionPricer 100000 | tee -a output.log
-          ./LiborSwaptionPricer 100000 | tee -a output.log
+          ./LiborSwaptionPricer 50000 | tee output.log
+          for i in $(seq 1 9) ; do \
+            ./LiborSwaptionPricer 50000 | tee -a ../output.log ; \
+          done
       - name: Prepare results
         if: github.event_name == 'pull_request'
         id: libor-results
@@ -187,7 +184,7 @@ jobs:
           repository: auto-differentiation-dev/xad
           path: QuantLib/build/test-suite/ref
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
-          run-id: 11161385127
+          run-id: ${{ vars.REFERENCE_RUN_ID }}
       - name: Pull Reference AdjointBermudan
         uses: actions/download-artifact@v4
         if: github.event_name == 'pull_request'
@@ -196,7 +193,7 @@ jobs:
           repository: auto-differentiation-dev/xad
           path: QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/ref
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
-          run-id: 11161385127
+          run-id: ${{ vars.REFERENCE_RUN_ID }}
       - name: Run Reference Test-suite
         if: github.event_name == 'pull_request'
         run: |
@@ -285,6 +282,22 @@ jobs:
           
           echo "result=| ${REF_TIME}ms | ${OUT_TIME}ms | ${PERCENTAGE}% |" >> "$GITHUB_OUTPUT"
 
+  update-runid:
+    name: Update Run-id
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dipatch'
+    needs:
+      - quantlib
+      - libor
+    steps:
+      - name: Set runid variable
+        run: |
+          gh variable list
+          gh variable set REFERENCE_RUN_ID --body "${{ github.run_id }}"
+          gh variable list
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_READ_TOKEN }}
+
 
   collect:
     name: Collect Results
@@ -306,7 +319,7 @@ jobs:
           echo "" >> results.md
           echo "| Application | Executions | Reference | Result | Improvement |" >> results.md
           echo "|-------------|-----------:|----------:|-------:|------------:|" >> results.md
-          echo "| [LIBOR Swaption (100K paths)](https://github.com/auto-differentiation/xad/tree/main/samples/LiborSwaptionPricer) | 5 $LIBOR" >> results.md
+          echo "| [LIBOR Swaption (50K paths)](https://github.com/auto-differentiation/xad/tree/main/samples/LiborSwaptionPricer) | 10 $LIBOR" >> results.md
           echo "| [testPathwiseGreeks](https://github.com/lballabio/QuantLib/blob/v1.35/test-suite/marketmodel.cpp#L2090) | 10 $TESTSUITE" >> results.md
           echo "| [Bermudan Swaption (500 repetitions)](https://github.com/auto-differentiation/QuantLib-Risks-Cpp/blob/main/Examples/AdjointBermudanSwaption/AdjointBermudanSwaptionXAD.cpp) | 5 $BERMUDAN" >> results.md
 
