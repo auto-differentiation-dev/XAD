@@ -260,6 +260,7 @@ jobs:
           for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
             ./AdjointBermudanSwaption 200 | tee -a ../reference.log ; \
           done
+          ls -l ..
       - name: Run Benchmark AdjointBermudan
         if: github.event_name == 'pull_request'
         run: |
@@ -271,6 +272,7 @@ jobs:
           for i in $(seq 1 ${{ vars.REPETITIONS }}) ; do \
             ./AdjointBermudanSwaption 200 | tee -a output.log ; \
           done
+          ls -l .
       - name: Prepare results Bermudan
         if: github.event_name == 'pull_request'
         id: bermudan-results
