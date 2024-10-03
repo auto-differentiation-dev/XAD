@@ -54,16 +54,16 @@ jobs:
         with:
           name: libor_exe
           repository: auto-differentiation-dev/xad
-          path: build/samples/LiborSwaptionPricer
+          path: build/samples/LiborSwaptionPricer/ref
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
           run-id: 11146849833
       - name: Run Reference
         if: github.event_name == 'pull_request'
         run: |
-          cd build/samples/LiborSwaptionPricer
+          cd build/samples/LiborSwaptionPricer/ref
           ls -l
-          file ./LiborSwaptionPricerRef
-          ./LiborSwaptionPricerRef 100000 | tee reference.log
+          file ./LiborSwaptionPricer
+          ./LiborSwaptionPricer 100000 | tee ../reference.log
       - name: Run Benchmark
         run: |
           cd build/samples/LiborSwaptionPricer
