@@ -54,14 +54,13 @@ jobs:
         with:
           name: libor_exe
           repository: auto-differentiation-dev/xad
-          path: build/samples/LiborSwaptionPricer/LiborSwaptionPricerRef
+          path: build/samples/LiborSwaptionPricer
           github-token: ${{ secrets.WORKFLOW_READ_TOKEN }}
           run-id: 11146849833
       - name: Run Reference
         if: github.event_name == 'pull_request'
         run: |
           cd build/samples/LiborSwaptionPricer
-          chmod +x ./LiborSwaptionPricerRef
           ls -l
           file ./LiborSwaptionPricerRef
           ./LiborSwaptionPricerRef 100000 | tee reference.log
@@ -74,14 +73,20 @@ jobs:
         run: |
           apt-get update && apt-get install -y bc
           OUT_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/output.log)
+          echo "Run time: $OUT_TIME"
           REF_TIME=$(awk '$2 == "AAD" {print $4}' build/samples/LiborSwaptionPricer/reference.log)
+          echo "Reference time: $REF_TIME"
           PERCENTAGE=$(echo "scale=3; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100" | bc)
+          echo "Percentage: $PERCENTAGE"
+          if [ "$PERCENTAGE" == "" ] ; then exit 1 ; fi
           
           echo "# LIBOR Swaption Portfolio Pricer" > results.md
           echo "" >> results.md
           echo "- **Time:** $OUT_TIME seconds" >> results.md
           echo "- **Reference:** $REF_TIME seconds" >> results.md
           echo "- **Improvement:** $PERCENTAGE %" >> results.md
+          
+          cat results.md
       - name: Find Comment
         uses: peter-evans/find-comment@v3
         if: github.event_name == 'pull_request'
