@@ -88,13 +88,21 @@ jobs:
         id: libor-results
         run: |
           set -e
-          apt-get update && apt-get install -y bc
+          apt-get update && apt-get install -y bc datamash
+          echo "Min   Max   Mean  Median  TrimMean  GeoMean  HarmMean"
+          echo "*Output*"
+          awk '$2 == "AAD" { print $4  }' build/samples/LiborSwaptionPricer/output.log | datamash min 1 max 1 mean 1 median 1 trimmean 1 geomean 1 harmmean 1
+          OUT_TIME=$(awk '$2 == "AAD" { print $4  }' build/samples/LiborSwaptionPricer/output.log | datamash median 1)
+          echo "*Reference*"
+          awk '$2 == "AAD" { print $4  }' build/samples/LiborSwaptionPricer/reference.log | datamash min 1 max 1 mean 1 median 1 trimmean 1 geomean 1 harmmean 1
+          REF_TIME=$(awk '$2 == "AAD" { print $4  }' build/samples/LiborSwaptionPricer/reference.log | datamash median 1)
+
           # OUT_TIME=$(awk 'BEGIN { all=0.0 } $2 == "AAD" { all += $4  } END { printf "%.3f\n", all / ${{ vars.REPETITIONS }} }' build/samples/LiborSwaptionPricer/output.log)
-          OUT_TIME=$(awk 'BEGIN { best=10000000.0 } $2 == "AAD" { best = best > $4 ? $4 : best;  } END { printf "%.3f\n", best }' build/samples/LiborSwaptionPricer/output.log)
-          echo "Run time: $OUT_TIME"
+          # OUT_TIME=$(awk 'BEGIN { best=10000000.0 } $2 == "AAD" { best = best > $4 ? $4 : best;  } END { printf "%.3f\n", best }' build/samples/LiborSwaptionPricer/output.log)
+          # echo "Run time: $OUT_TIME"
           # REF_TIME=$(awk 'BEGIN { all=0.0 } $2 == "AAD" { all += $4  } END { printf "%.3f\n", all / ${{ vars.REPETITIONS }} }' build/samples/LiborSwaptionPricer/reference.log)
-          REF_TIME=$(awk 'BEGIN { best=10000000.0 } $2 == "AAD" { best = best > $4 ? $4 : best;  } END { printf "%.3f\n", best }' build/samples/LiborSwaptionPricer/reference.log)
-          echo "Reference time: $REF_TIME"
+          # REF_TIME=$(awk 'BEGIN { best=10000000.0 } $2 == "AAD" { best = best > $4 ? $4 : best;  } END { printf "%.3f\n", best }' build/samples/LiborSwaptionPricer/reference.log)
+          # echo "Reference time: $REF_TIME"
           DIFFERENCE=$(echo "scale=9; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
           echo "Difference: $DIFFERENCE"
           PERCENTAGE=$(echo "scale=9; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100.0" | bc | awk '{printf "%.3f\n", $1}')
@@ -131,7 +139,7 @@ jobs:
       - name: Setup
         run: |
           apt-get update \
-          && apt-get install -y ninja-build bc
+          && apt-get install -y ninja-build bc datamash
       - name: Configure
         run: |
           cd QuantLib
@@ -231,24 +239,32 @@ jobs:
         run: |
           set -e
           ls -l QuantLib/build/test-suite/
-          #OUT_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/output.log | \
+          echo "Min   Max   Mean  Median  TrimMean  GeoMean  HarmMean"
+          echo "*Output*"
+          sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/output.log | awk ' $0 ~ /Leaving test case.*testPathwiseGreeks/ { print $NF }' | datamash min 1 max 1 mean 1 median 1 trimmean 1 geomean 1 harmmean 1
+          OUT_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/output.log | awk ' $0 ~ /Leaving test case.*testPathwiseGreeks/ { print $NF }' | datamash median 1)
+          echo "*Reference*"
+          sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/reference.log | awk ' $0 ~ /Leaving test case.*testPathwiseGreeks/ { print $NF }' | datamash min 1 max 1 mean 1 median 1 trimmean 1 geomean 1 harmmean 1
+          REF_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/reference.log | awk ' $0 ~ /Leaving test case.*testPathwiseGreeks/ { print $NF }' | datamash median 1)
+
+          # OUT_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/output.log | \
           #           awk 'BEGIN { all=0.0 } \
           #                $0 ~ /Leaving test case.*testPathwiseGreeks/ { all += $NF / 1000.0; } \
           #                END {printf "%.3f\n", all / ${{ vars.REPETITIONS }} }' )
-          OUT_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/output.log | \
-                     awk 'BEGIN { best=10000000.0 } \
-                          $0 ~ /Leaving test case.*testPathwiseGreeks/ { best = best >  $NF / 1000.0 ? $NF / 1000.0 : best; } \
-                          END {printf "%.3f\n", best }' )
-          echo "Run time: $OUT_TIME"
+          # OUT_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/output.log | \
+          #           awk 'BEGIN { best=10000000.0 } \
+          #                $0 ~ /Leaving test case.*testPathwiseGreeks/ { best = best >  $NF / 1000.0 ? $NF / 1000.0 : best; } \
+          #                END {printf "%.3f\n", best }' )
+          # echo "Run time: $OUT_TIME"
           # REF_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/reference.log | \
           #           awk 'BEGIN { best=0.0 } \
           #           $0 ~ /Leaving test case.*testPathwiseGreeks/ { all += $NF / 1000.0; } \
           #           END {printf "%.3f\n", all / ${{ vars.REPETITIONS }} }' )
-          REF_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/reference.log | \
-                     awk 'BEGIN { best=10000000.0 } \
-                          $0 ~ /Leaving test case.*testPathwiseGreeks/ { best = best >  $NF / 1000.0 ? $NF / 1000.0 : best; } \
-                          END {printf "%.3f\n", best }' )
-          echo "Reference time: $REF_TIME"
+          # REF_TIME=$(sed -e 's/us$//g' -e 's/ms$/000/g' QuantLib/build/test-suite/reference.log | \
+          #           awk 'BEGIN { best=10000000.0 } \
+          #                $0 ~ /Leaving test case.*testPathwiseGreeks/ { best = best >  $NF / 1000.0 ? $NF / 1000.0 : best; } \
+          #                END {printf "%.3f\n", best }' )
+          # echo "Reference time: $REF_TIME"
           DIFFERENCE=$(echo "scale=9; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
           echo "Difference: $DIFFERENCE"
           PERCENTAGE=$(echo "scale=9; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100.0" | bc | awk '{printf "%.3f\n", $1}')
@@ -289,24 +305,32 @@ jobs:
         run: |
           set -e
           ls -l QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/
+          echo "Min   Max   Mean  Median  TrimMean  GeoMean  HarmMean"
+          echo "*Output*"
+          awk '$1 == "For" && $7 == "average" { print $8 }' QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/output.log | datamash min 1 max 1 mean 1 median 1 trimmean 1 geomean 1 harmmean 1
+          OUT_TIME=$(awk '$1 == "For" && $7 == "average" { print $8 }' QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/output.log | datamash median 1)
+          echo "*Reference*"
+          awk '$1 == "For" && $7 == "average" { print $8 }' QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/reference.log | datamash min 1 max 1 mean 1 median 1 trimmean 1 geomean 1 harmmean 1
+          OUT_TIME=$(awk '$1 == "For" && $7 == "average" { print $8 }' QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/reference.log | datamash median 1)
+          
           #OUT_TIME=$( awk 'BEGIN { all=0.0 } \
           #                $1 == "For" && $7 == "average" { all += $8 ; } \
           #                END {printf "%.3f", all / ${{ vars.REPETITIONS }}}' \
           #                QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/output.log)
-          OUT_TIME=$( awk 'BEGIN { best=10000000.0 } \
-                          $1 == "For" && $7 == "average" { best = best > $8 ? $8 : best ; } \
-                          END {printf "%.3f", best }' \
-                          QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/output.log)
-          echo "Run time: $OUT_TIME"
+          # OUT_TIME=$( awk 'BEGIN { best=10000000.0 } \
+          #                $1 == "For" && $7 == "average" { best = best > $8 ? $8 : best ; } \
+          #                END {printf "%.3f", best }' \
+          #                QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/output.log)
+          # echo "Run time: $OUT_TIME"
           #REF_TIME=$( awk 'BEGIN { all=0.0 } \
           #                $1 == "For" && $7 == "average" { all += $8 } \
           #                END {printf "%.3f", all / ${{ vars.REPETITIONS }} }' \
           #                QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/reference.log)
-          REF_TIME=$( awk 'BEGIN { best=10000000.0 } \
-                      $1 == "For" && $7 == "average" { best = best > $8 ? $8 : best ; } \
-                      END {printf "%.3f", best }' \
-                      QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/reference.log)
-          echo "Reference time: $REF_TIME"
+          # REF_TIME=$( awk 'BEGIN { best=10000000.0 } \
+          #            $1 == "For" && $7 == "average" { best = best > $8 ? $8 : best ; } \
+          #            END {printf "%.3f", best }' \
+          #            QuantLib/build/QuantLib-Risks-Cpp/Examples/AdjointBermudanSwaption/reference.log)
+          #echo "Reference time: $REF_TIME"
           DIFFERENCE=$(echo "scale=9; $REF_TIME - $OUT_TIME" | bc | awk '{printf "%.3f\n", $1}')
           echo "Difference: $DIFFERENCE"
           PERCENTAGE=$(echo "scale=9; (($REF_TIME - $OUT_TIME) / $REF_TIME) * 100.0" | bc | awk '{printf "%.3f\n", $1}')
