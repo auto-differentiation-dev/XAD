@@ -3,7 +3,7 @@
 #  Main CMake file
 #
 #  This file is part of XAD, a comprehensive C++ library for
-#  automatic differentiation.
+#  automatic-differentiation.
 #
 #  Copyright (C) 2010-2024 Xcelerit Computing Ltd.
 #
